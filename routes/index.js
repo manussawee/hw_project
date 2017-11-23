@@ -2,7 +2,7 @@ var express = require('express');
 var router = express.Router();
 
 function isNumber (value) {
-	if(value.length == 0) return false;
+	if(value == undefined || value.length == 0) return false;
 
 	let parts = value.split('.');
 	if(parts.length > 2) return false;
