@@ -149,7 +149,7 @@ router.get('/receive_data', function(req, res, next) {
 				let distance = Math.round(step * 70) / 100;
 				let speed = Math.round(distance / (duration * 60) * 10) / 10;
 				if(peak.avg > 1500 || step > duration * 60 * 4) {
-					distance = Math.round((step * 100) / 100);
+					distance = Math.round((step * 105) / 100);
 					speed = Math.round(distance / (duration * 60) * 10) / 10;
 				}
 

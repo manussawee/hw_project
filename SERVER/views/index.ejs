@@ -125,7 +125,7 @@
 								duration = Date.now() - current_activity.created_at;
 								duration = Math.round(duration / 1000 / 60 * 100) / 100;
 								distance = Math.round(step * 70) / 100;
-								if(peak.avg > 1500 || step > duration * 60 * 4) distance = Math.round(step * 100) / 100;
+								if(peak.avg > 1500 || step > duration * 60 * 4) distance = Math.round(step * 105) / 100;
 								speed = Math.round(distance / (duration * 60) * 100) / 100;
 
 								$('#step').text(step);
@@ -141,7 +141,7 @@
 						  		step = peak.step;
 								distance = Math.round(step * 75) / 100;
 								if(peak.avg > 1500 || step > duration * 60 * 4) {
-									distance = Math.round((step * 100) / 100);
+									distance = Math.round((step * 105) / 100);
 								}
 								speed = Math.round(distance / (duration * 60) * 10) / 10;
 
@@ -188,7 +188,7 @@
 						let distance = Math.round(step * 70) / 100;
 						let speed = Math.round(distance / (duration * 60) * 100) / 100;
 						if(peak.avg > 1500 || step > duration * 60 * 4) {
-							distance = Math.round((step * 100) / 100);
+							distance = Math.round((step * 105) / 100);
 							speed = Math.round(distance / (duration * 60) * 100) / 100;
 						}
 						let burned = Math.round(((0.030 * 60) + (((speed * speed) / 1.7) * 0.029 * 60)) * duration * 100) / 100;
