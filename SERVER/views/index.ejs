@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<script type="text/javascript" src="js/jquery-3.2.1.min.js"></script>
+		<script type="text/javascript" src="js/socket.io.js"></script>
+		<link rel="stylesheet" type="text/css" href="css/bootstrap.min.css">
+		<link rel="stylesheet" type="text/css" href="css/style.css">
+		<title><%= title %></title>
+	</head>
+	<body style="background-color: rgb(200, 235, 255)">
+		<div class="container" style="padding-top: 32px;">
+			<div class="row activity-new" id="start-activity">
+				<div class="col-6">
+					<input class="form-control" id="max" placeholder="MAXIMUM SPEED">
+				</div>
+				<div class="col-6">
+					<input class="form-control" id="min" placeholder="MINIMUM SPEED">
+				</div>
+				<span class="start" id="start">START</span>
+			</div>
+			<div class="row activity-new" id="countdown-activity">
+				<span class="start" style="font-size: 72px; margin-top: -22px" id="countdown">3</span>
+			</div>
+			<div class="row activity-new stop" id="current-activity">
+				<div class="col-1"></div>
+				<div class="col-2 center" >
+					<div>SPEED(m/s)</div>
+					<div class="num" id="speed">0</div>
+				</div>
+				<div class="col-2 center" >
+					<div>STEP</div>
+					<div class="num" id="step">0</div>
+				</div>
+				<div class="col-2 center" >
+					<div>DISTANCE(m)</div>
+					<div class="num" id="distance">0</div>
+				</div>
+				<div class="col-2 center" >
+					<div>BURNED(cal)</div>
+					<div class="num" id="burned">0</div>
+				</div>
+				<div class="col-2 center" >
+					<div>DURATION(min)</div>
+					<div class="num" id="duration">0</div>
+				</div>
+			</div>
+			<div id="all"></div>
+		</div>
+
+		<script type="text/javascript">
+
+			let min = (A, B) => A > B ? B : A;
+			let max = (A, B) => A > B ? A : B;
+			let len = str => str.length;
+
+			let durationFormat = (duration) => {
+				let s = Math.round(duration) % 60;
+				if(s < 10) s = '0' + s;
+				let m = Math.floor(duration / 60);
+				return m + ':' + s;
+			}
+			let getPeak = lis => {
+				let up = [],down = [],count = 0,mode=-1;
+				let sum = 0;
+				for(let i = 1; i < lis.length-2 ; i++){
+					if(lis[i] > lis[i+1] && lis[i] > lis[i-1]){
+						up.push(lis[i]);
+						sum += lis[i];
+						if(mode==-1)
+							mode = 1;
+					}
+					if(lis[i] < lis[i+1] && lis[i] < lis[i-1]){
+						down.push(lis[i]);
+						if(mode==-1)
+							mode = 0;
+					}
+				}
+
+				mx = 200;
+				for(let i = 0 ; i < up.length ; i++){
+					mn = 10000;
+					if(i-mode >= 0 && i-mode < down.length)
+						mn = up[i] - down[i-mode];
+					if(i+1-mode >= 0 && i+1-mode < down.length)
+						mn = min(up[i] - down[i+1-mode], mn);
+					if(mn!=10000)
+						mx = max(mx,mn);
+				}
+				for(let i = 0 ; i < up.length ; i++){
+					mn = 10000;
+					if(i-mode >= 0 && i-mode < len(down))
+						mn = up[i] - down[i-mode];
+					if(i+1-mode >=0 && i+1-mode <len(down))
+						mn = min(up[i] - down[i+1-mode], mn);
+					if(mn >= mx*(25/100))
+						count+=1;
+				}
+				return { step: count, avg: sum / up.length };
+			}
+
+			let getCurrent = () => { 
+				$.get('get_current', (data) => {
+					if(data != 0) {
+						current_activity = data;
+						current_activity.data = JSON.parse(current_activity.data);
+						$('#current-activity').show();
+						$('#start-activity').hide();
+						// render current data
+						setInterval(function() {
+							let y = [];
+							let duration = 0;
+							let distance = 0;
+							let speed = 0;
+							let step = 0;
+							let burned = 0;
+
+							if(current_activity.data.length > 0) {
+
+								y = [];
+								for(let i = 0; i < current_activity.data.length; i++) {
+									y.push(current_activity.data[i].y);
+								}
+								let peak = getPeak(y);
+								step = peak.step;
+								duration = Date.now() - current_activity.created_at;
+								duration = Math.round(duration / 1000 / 60 * 100) / 100;
+								distance = Math.round(step * 70) / 100;
+								if(peak.avg > 1500 || step > duration * 60 * 4) distance = Math.round(step * 100) / 100;
+								speed = Math.round(distance / (duration * 60) * 100) / 100;
+
+								$('#step').text(step);
+								$('#distance').text(distance);
+
+								y = [];
+								duration = (Date.now() - (current_activity.data[current_activity.data.length > 100 ? (current_activity.data.length - 100) : 0].timestamp)) / 1000 / 60;
+						  		for(let i = current_activity.data.length > 100 ? current_activity.data.length - 100 : 0; i < current_activity.data.length ; i++) {
+						  			y.push(current_activity.data[i].y);
+						  		}
+
+						  		peak = getPeak(y);
+						  		step = peak.step;
+								distance = Math.round(step * 75) / 100;
+								if(peak.avg > 1500 || step > duration * 60 * 4) {
+									distance = Math.round((step * 100) / 100);
+								}
+								speed = Math.round(distance / (duration * 60) * 10) / 10;
+
+								$('#speed').text(speed);
+							}
+
+							duration = (Date.now() - current_activity.created_at) / 1000;
+							burned = Math.round(((0.030 * 60) + (((speed * speed) / 1.7) * 0.029 * 60)) * duration / 60 * 100) / 100;
+							$('#duration').text(durationFormat(duration));
+							$('#burned').text(burned);
+
+							if(speed < current_activity.min) {
+								$('#current-activity').css({'background-color': 'rgb(83, 122, 248)', 'color': 'white'});
+								setTimeout(() => {
+									$('#current-activity').css({'background-color': 'white', 'color': 'rgb(100, 100, 100)'});
+								}, 500);
+							}
+							else if(speed > current_activity.max) {
+								$('#current-activity').css({'background-color': 'rgb(248, 122, 83)', 'color': 'white'});
+								setTimeout(() => {
+									$('#current-activity').css({'background-color': 'white', 'color': 'rgb(100, 100, 100)'});
+								}, 500);
+							}
+
+						}, 1000);
+					}
+				});
+			}
+
+			let getPast = () => {
+				$.get('get_past', (data) => {
+					past_activities = data;
+					// render past data
+					let all = "";
+					past_activities.reverse().map(activity => {
+						let y = [];
+						activity.data = JSON.parse(activity.data);
+						
+						for(let i = 0; i < activity.data.length; i++) y.push(activity.data[i].y);
+						let peak = getPeak(y);
+						let step = peak.step;
+						let duration = Math.round((activity.finished_at - activity.created_at) / 1000 / 60 * 100) / 100;
+						let datetime = new Date(parseInt(activity.created_at)).toLocaleString();
+						let distance = Math.round(step * 70) / 100;
+						let speed = Math.round(distance / (duration * 60) * 100) / 100;
+						if(peak.avg > 1500 || step > duration * 60 * 4) {
+							distance = Math.round((step * 100) / 100);
+							speed = Math.round(distance / (duration * 60) * 100) / 100;
+						}
+						let burned = Math.round(((0.030 * 60) + (((speed * speed) / 1.7) * 0.029 * 60)) * duration * 100) / 100;
+						console.log(peak.avg);
+						all += '<div class="row activity" style="padding-left: 12px"><a href="#" class="float-right" onclick="removeActivity(' + activity.id + ')">X</a><div style="margin-left: 32px"><span style="margin-right: 32px;">' + datetime + '</span><span style="margin-right: 12px">SPEED: ' + speed + ' m/s</span><span style="margin-right: 12px">STEP: ' + step + '</span><span style="margin-right: 12px">DISTANCE: ' + Math.round(distance) + 'm</span><span style="margin-right: 12px">BURNED: ' + burned + ' cal</span><span style="margin-right: 12px">DURATION: ' + durationFormat(duration * 60) + ' min</span></div></div>';
+					});
+
+					$('#all').html(all);
+				});
+			}
+
+			let removeActivity = id => {
+				if(confirm('Are you sure?')) {
+					$.get('delete_activity/?id=' + id, (data) => {
+						if(data == 1) {
+							window.location = '';
+						}
+					});
+				}
+			}
+
+			$('#current-activity').hide();
+			$('#countdown-activity').hide();
+
+			let current_activity = null;
+			let past_activities = null;
+
+			getCurrent();
+			getPast();
+
+			$('#current-activity').click(() => {
+				$.post('post_stop', null, (data => {
+					window.location = '';
+				}));
+			});
+			
+			$('#start').click(() => {
+				let countdown = 3;
+				$('#start-activity').hide();
+				$('#countdown-activity').show();
+				let interval = setInterval(() => {
+					countdown--;
+					if(countdown < 0) {
+						$.post('post_start', {
+							max: $('#max').val() ? $('#max').val() : 1000,
+							min: $('#min').val() ? $('#min').val() : 0,
+						}, function(data) {
+							$('#countdown-activity').hide();
+							$('#current-activity').show();
+							clearInterval(interval);
+							getCurrent();
+						});
+						countdown = 3;
+					}
+					$('#countdown').text(countdown);
+				}, 1000);
+			});
+
+			var socket = io(':8001');
+
+			socket.on('update_data', function(new_data) {
+				current_activity.data = new_data;
+				// console.log(new_data);
+			});
+
+		</script>
+	</body>
+</html>
