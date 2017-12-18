@@ -53,7 +53,7 @@ let getPeak = lis => {
 		if(mn >= mx*(25/100))
 			count+=1;
 	}
-	return { step: count, avg: sum / up.length };
+	return { step: Math.round(count * 1.25), avg: sum / up.length };
 }
 
 function isNumber (value) {

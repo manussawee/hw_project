@@ -11,10 +11,10 @@
 		<div class="container" style="padding-top: 32px;">
 			<div class="row activity-new" id="start-activity">
 				<div class="col-6">
-					<input class="form-control" id="max" placeholder="MAXIMUM SPEED">
+					<input class="form-control" id="min" placeholder="MINIMUM SPEED">
 				</div>
 				<div class="col-6">
-					<input class="form-control" id="min" placeholder="MINIMUM SPEED">
+					<input class="form-control" id="max" placeholder="MAXIMUM SPEED">
 				</div>
 				<span class="start" id="start">START</span>
 			</div>
@@ -95,7 +95,7 @@
 					if(mn >= mx*(25/100))
 						count+=1;
 				}
-				return { step: count, avg: sum / up.length };
+				return { step: Math.round(count * 1.25), avg: sum / up.length };
 			}
 
 			let getCurrent = () => { 
